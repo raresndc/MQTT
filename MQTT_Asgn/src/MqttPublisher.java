@@ -7,15 +7,12 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
 import java.security.KeyStore;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.util.Properties;
 
 public class MqttPublisher {
-
     public static void main(String[] args) {
         try {
-            // Load properties from the file
+            // Load properties
             Properties properties = ConfigLoader.loadConfig();
             String broker = properties.getProperty("mqtt.broker.host");
             int port = Integer.parseInt(properties.getProperty("mqtt.broker.port"));
@@ -23,18 +20,16 @@ public class MqttPublisher {
             String username = properties.getProperty("mqtt.broker.username");
             String password = properties.getProperty("mqtt.broker.password");
             int keepAliveInterval = Integer.parseInt(properties.getProperty("mqtt.broker.keepalive"));
-            String certPath = properties.getProperty("ssl.cert.path");
-            String keyPath = properties.getProperty("ssl.key.path");
             String truststorePath = properties.getProperty("ssl.truststore.path");
             String truststorePassword = properties.getProperty("ssl.truststore.password");
 
-            // Set up SSL Context if SSL is enabled
+            // SSL Context setup
             SSLContext sslContext = null;
             if (Boolean.parseBoolean(properties.getProperty("ssl.enabled"))) {
                 sslContext = createSSLContext(truststorePath, truststorePassword);
             }
 
-            // Create connection options
+            // Connection options
             MqttConnectOptions options = new MqttConnectOptions();
             options.setCleanSession(true);
             options.setUserName(username);
@@ -43,13 +38,14 @@ public class MqttPublisher {
 
             if (sslContext != null) {
                 options.setSocketFactory(sslContext.getSocketFactory());
+                options.setSSLHostnameVerifier((hostname, session) -> true); // Disable for testing
             }
 
-            // Create MQTT client with persistence
+            // MQTT client
             MqttClient client = new MqttClient(protocol + "://" + broker + ":" + port, MqttClient.generateClientId(), new MemoryPersistence());
             client.connect(options);
 
-            // Publish a message
+            // Publish message
             String topic = properties.getProperty("mqtt.topic");
             String message = "Hello, MQTT with SSL!";
             MqttMessage mqttMessage = new MqttMessage(message.getBytes());

@@ -2,13 +2,35 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.*;
 import java.util.Base64;
 
 public class EncryptionUtils {
+    private static final String KEY_FILE = "encryption.key";
+
     public static SecretKey generateKey() throws Exception {
         KeyGenerator keyGen = KeyGenerator.getInstance("AES");
         keyGen.init(128); // 128-bit key
         return keyGen.generateKey();
+    }
+
+    public static void saveKey(SecretKey key) throws Exception {
+        byte[] encodedKey = key.getEncoded();
+        try (FileOutputStream fos = new FileOutputStream(KEY_FILE)) {
+            fos.write(encodedKey);
+        }
+    }
+
+    public static SecretKey loadKey() throws Exception {
+        File keyFile = new File(KEY_FILE);
+        if (!keyFile.exists()) {
+            throw new FileNotFoundException("Encryption key file not found: " + KEY_FILE);
+        }
+        byte[] encodedKey;
+        try (FileInputStream fis = new FileInputStream(KEY_FILE)) {
+            encodedKey = fis.readAllBytes();
+        }
+        return new SecretKeySpec(encodedKey, "AES");
     }
 
     public static String encrypt(String data, SecretKey key) throws Exception {

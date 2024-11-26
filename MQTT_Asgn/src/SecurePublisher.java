@@ -1,22 +1,25 @@
 import org.eclipse.paho.client.mqttv3.*;
 
 import javax.crypto.SecretKey;
+import java.util.Properties;
 
 public class SecurePublisher {
     public static void main(String[] args) throws Exception {
-        String broker = "ssl://localhost:8883";
-        String topic = "test/secure";
-        String username = "user";
-        String password = "!Aa123456";
+        Properties config = ConfigLoader.loadConfig();
+        String broker = config.getProperty("mqtt.broker.protocol") + "://" +
+                config.getProperty("mqtt.broker.host") + ":" +
+                config.getProperty("mqtt.broker.port");
+        String topic = config.getProperty("mqtt.topic");
+        String username = config.getProperty("mqtt.broker.username");
+        String password = config.getProperty("mqtt.broker.password");
+        String payload = config.getProperty("mqtt.broker.payload");
 
-        // Generate an encryption key
         SecretKey secretKey = EncryptionUtils.generateKey();
+        EncryptionUtils.saveKey(secretKey);
 
-        // Encrypt the payload
-        String payload = "Hello Secure World!";
+//        String payload = "Hello Secure World!";
         String encryptedPayload = EncryptionUtils.encrypt(payload, secretKey);
 
-        // Initialize the MQTT client
         MqttClient client = new MqttClient(broker, MqttClient.generateClientId());
         MqttConnectOptions options = new MqttConnectOptions();
         options.setUserName(username);
@@ -24,13 +27,16 @@ public class SecurePublisher {
 
         client.connect(options);
 
-        // Publish the encrypted message
         MqttMessage message = new MqttMessage(encryptedPayload.getBytes());
         client.publish(topic, message);
 
-        System.out.println("Message published: " + encryptedPayload);
+        System.out.println("Message published: " + encryptedPayload + " at topic " + topic);
+
+        Thread.sleep(5000);
+
+        client.publish(topic, message);
 
         client.disconnect();
-        System.out.println("Disconnected.");
+        System.out.println("Publisher disconnected.");
     }
 }
